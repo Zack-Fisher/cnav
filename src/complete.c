@@ -7,7 +7,10 @@
 #include <dirent.h>
 #include <unistd.h>
 
-void path_completion_get(char const *curr_input, char *comp_buf, int buf_len) {
+void dr_clean(DIR **d) { closedir(*d); }
+
+static bool path_completion_get(char const *curr_input, char *comp_buf,
+                                int buf_len) {
   char input_buf[MAX_INPUT_LEN];
   strncpy(input_buf, curr_input, MAX_INPUT_LEN);
 
@@ -44,10 +47,9 @@ void path_completion_get(char const *curr_input, char *comp_buf, int buf_len) {
   char *const working_path = last_slash + 1;
 
   struct dirent *de;
-  DIR *dr = opendir(base_path);
+  __attribute__((cleanup(dr_clean))) DIR *dr = opendir(base_path);
   if (dr == NULL) {
-    fprintf(stderr, "completions could not open directory '%s'.\n", last_space);
-    return;
+    return false;
   }
 
   while ((de = readdir(dr)) != NULL) {
@@ -56,14 +58,14 @@ void path_completion_get(char const *curr_input, char *comp_buf, int buf_len) {
       // TODO: more sophisticated, get the best match.
       snprintf(comp_buf, buf_len, "%s%s%s/%s", input_buf,
                is_space_in_cmd ? " " : "", base_path, de->d_name);
-      break;
+      return true;
     }
   }
 
-  closedir(dr);
+  return false;
 }
 
-void completion_get(char const *curr_input, char *comp_buf, int buf_len) {
+bool completion_get(char const *curr_input, char *comp_buf, int buf_len) {
   // how can we decide contextually what's the best type of completion to do?
-  path_completion_get(curr_input, comp_buf, buf_len);
+  return path_completion_get(curr_input, comp_buf, buf_len);
 }

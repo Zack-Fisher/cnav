@@ -19,6 +19,8 @@
 #include "terminal.h"
 #include "whisper/colmap.h"
 
+#define CTRL(ch) (ch & 0x1F)
+
 #define CMP(cmp_ptr, lit) (strncmp(cmp_ptr, lit, strlen(lit)) == 0)
 
 ModeData const *curr_mode_data = NULL;
@@ -255,9 +257,18 @@ int main(int argc, char *argv[]) {
       case '\t': {
 #define COMP_BUF_LEN (256)
         char comp_buf[COMP_BUF_LEN] = {0};
-        completion_get(input, comp_buf, COMP_BUF_LEN);
-        REPLACE_CMD(comp_buf);
+        if (completion_get(input, comp_buf, COMP_BUF_LEN)) {
+          REPLACE_CMD(comp_buf);
+        }
 #undef COMP_BUF_LEN
+      } break;
+
+      case CTRL('w'): { // go back a word.
+        BACKSPACE();
+        while ((input[len - 1] != ' ') &&
+               (len > 0)) { // backspace until we hit a ' '.
+          BACKSPACE();
+        }
       } break;
 
       case 0x1B: {
