@@ -10,20 +10,64 @@
 #include "main.h"
 #include "terminal.h"
 
-int parse_and_execute_command(char *input, int input_len) {
+// expand input into buf.
+int cmd_expand(char const *input, int input_len, char *buf, int buf_len) {
+  char *_ptr = buf;
+  int i = 0;
+  while (true) {
+    if (i >= input_len) {
+      break;
+    }
+
+    switch (input[i]) {
+    case '~': {
+      _ptr += sprintf(_ptr, "%s", getenv("HOME"));
+    } break;
+
+    default: {
+      _ptr += sprintf(_ptr, "%c", input[i]);
+    } break;
+    }
+
+    i++;
+  }
+  return _ptr - buf;
+}
+
+int parse_and_execute_command(char const *input, int input_len) {
   if (input_len <= 0) {
     return 0;
   }
 
-  char input_buf[input_len];
-  strcpy(input_buf, input);
+  char expand_buf[input_len * 4];
+  const int expanded_length =
+      cmd_expand(input, input_len, expand_buf, input_len * 4);
+  // printf("raw input:\n%s\nexpanded:\n%s\n", input, expand_buf);
+
+  {
+    char *space = strchr(expand_buf, ' ');
+    if (!space) {
+      space = expand_buf + expanded_length + 1;
+    }
+    int word_len = space - expand_buf;
+    char word_buf[word_len + 1];
+    strncpy(word_buf, expand_buf, word_len);
+    word_buf[word_len] = '\0';
+
+    // if there's no shell builtin for the first word, then execute the whole
+    // string as a sh -c arg.
+    if (!w_cm_get(&builtin_map, word_buf)) {
+      char *argv[] = {"/bin/sh", "-c", expand_buf, NULL};
+      return execute_command(3, argv);
+    }
+  }
 
   // Tokenize input into command and arguments
   char *token;
   int argc = 0;
   char *argv[MAX_INPUT_LEN];
 
-  token = strtok(input, " ");
+  token = strtok(expand_buf, " ");
   while (token != NULL) {
     argv[argc] = token;
     argc++;
@@ -34,12 +78,11 @@ int parse_and_execute_command(char *input, int input_len) {
 
   // try to execute the builtin from argv[0], or fallback on just running it
   // through sh.
-  Builtin *b = w_cm_get(&builtin_map, argv[0]);
+  Builtin const *b = w_cm_get(&builtin_map, argv[0]);
   if (b && b->fn) {
     return b->fn(argc, argv);
   } else {
-    char *argv[] = {"/bin/sh", "-c", input_buf, NULL};
-    return execute_command(3, argv);
+    return INTERNAL_ERROR;
   }
 }
 

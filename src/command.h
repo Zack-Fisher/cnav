@@ -9,5 +9,5 @@
     execute_and_count_result = execute_command(eac_argc, eac_argv);            \
   }
 
-int parse_and_execute_command(char *input, int input_len);
+int parse_and_execute_command(char const *input, int input_len);
 int execute_command(int argc, char *argv[]);
