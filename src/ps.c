@@ -1,4 +1,5 @@
 #include "ps.h"
+#include "ansi.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +29,11 @@ __attribute__((constructor)) void init_ps() {
 static void _sync_ps() {
   memset(_ps.buf, 0, MAX_PS_LEN); // might as well.
   char *_ptr = _ps.buf;
-  _ptr += sprintf(_ptr, "[ %d ", _ps.err_code);
+  if (_ps.err_code == 0) {
+    _ptr += sprintf(_ptr, "[ " ANSI_GREEN "%d " ANSI_RESET, _ps.err_code);
+  } else {
+    _ptr += sprintf(_ptr, "[ " ANSI_RED "%d " ANSI_RESET, _ps.err_code);
+  }
 
   int num_modes = 0;
   for (int i = 0; i < MAX_MODES; i++) {
@@ -47,7 +52,18 @@ static void _sync_ps() {
     _ptr += sprintf(_ptr, " ) ");
   }
 
-  _ptr += sprintf(_ptr, "%s@%s ]> ", _ps.username, _ps.hostname);
+  _ptr +=
+      sprintf(_ptr, ANSI_GREEN "%s" ANSI_YELLOW "@" ANSI_GREEN "%s" ANSI_RESET,
+              _ps.username, _ps.hostname);
+
+  char cwd[512];
+  if (getcwd(cwd, 512)) {
+    _ptr += sprintf(_ptr, ANSI_BLUE " %s" ANSI_RESET, cwd);
+  } else {
+    perror("getcwd");
+  }
+
+  _ptr += sprintf(_ptr, " ]> ");
 }
 
 void add_ps_mode(char const *mode) {

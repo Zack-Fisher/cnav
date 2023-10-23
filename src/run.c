@@ -103,8 +103,11 @@ int mode_run(Mode mode, char *input_ptr) {
   }
 
   case C_MODE: {
-    fill_file("/tmp/cnav_in.c", "int main() {%s}", input_ptr,
-              &_input_files[C_MODE]);
+    fill_file("/tmp/cnav_in.c",
+              "#include <stdio.h>\n"
+              "#include <stdlib.h>\n"
+              "int main() {%s}",
+              input_ptr, &_input_files[C_MODE]);
     // compile the string.
     TRY_EXEC("gcc", "/tmp/cnav_in.c", "-o", "/tmp/cnav_bin");
     RUN_BIN("/tmp/cnav_bin");

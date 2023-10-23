@@ -3,8 +3,11 @@
 
 static struct termios oldt, newt;
 
-void term_setup() {
+__attribute__((constructor)) void term_init() {
   tcgetattr(STDIN_FILENO, &oldt);
+}
+
+void term_setup() {
   // disable character ECHO by default, we want to be able to control which
   // characters get mirrored to the screen. also disable buffering.
   newt = oldt;

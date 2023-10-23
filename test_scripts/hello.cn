@@ -1,0 +1,6 @@
+#!/bin/cnav
+
+_shell
+echo hello world
+_c
+printf("hello world\n");
