@@ -1,0 +1,3 @@
+# libwhisper
+
+C utility library.
