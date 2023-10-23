@@ -1,68 +1,65 @@
-#include "complete.h"
-#include "main.h"
-
+#include <dirent.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <dirent.h>
-#include <unistd.h>
-
 void dr_clean(DIR **d) { closedir(*d); }
 
-static bool path_completion_get(char const *curr_input, char *comp_buf,
-                                int buf_len) {
-  char input_buf[MAX_INPUT_LEN];
-  strncpy(input_buf, curr_input, MAX_INPUT_LEN);
-
-  // this is making the assumption that the filepaths don't have spaces in them
-  // for now.
-  char *last_space = strrchr(input_buf, ' ');
-  bool is_space_in_cmd = false;
-  if (last_space) {
-    is_space_in_cmd = true;
-    // null terminate so that we can use the input_buf beginning later.
-    last_space[0] = '\0';
-    // must point to the first character.
-    last_space++;
-  } else {
-    last_space =
-        input_buf; // skip to the last word.
-                   // for example: "cd Docum<Tab>", we need to start at 'D',
-                   // not the beginning of the actual commandline 'c'.
-  }
-
-  // if there is no path, open the current directory.
-  char *base_path = ".";
-  char *last_slash = strrchr(last_space, '/');
-  if (last_slash != NULL) {
-    base_path = last_space;
-    last_slash[0] = '\0';
-  } else {
-    // then the "last slash" is the beginning of the commandline. we still need
-    // to interpret it like the end of a path.
-    last_slash = last_space - 1;
-  }
-  // the last bit of the path that the user is still typing, this is what we'll
-  // try to complete.
-  char *const working_path = last_slash + 1;
-
+bool find_best_completion(const char *working_path, const char *base_path,
+                          char *comp_buf, int buf_len) {
   struct dirent *de;
   __attribute__((cleanup(dr_clean))) DIR *dr = opendir(base_path);
   if (dr == NULL) {
     return false;
   }
 
+  bool found = false;
   while ((de = readdir(dr)) != NULL) {
-    // if the working path is a subset of the d_name, accept this completion.
     if (strncasecmp(working_path, de->d_name, strlen(working_path)) == 0) {
-      // TODO: more sophisticated, get the best match.
-      snprintf(comp_buf, buf_len, "%s%s%s/%s", input_buf,
-               is_space_in_cmd ? " " : "", base_path, de->d_name);
-      return true;
+      snprintf(comp_buf, buf_len, "%s", de->d_name);
+      found = true;
+      break; // Stop after finding the first match, could be improved
     }
   }
+  return found;
+}
 
-  return false;
+bool path_completion_get(const char *curr_input, char *comp_buf, int buf_len) {
+  char input_buf[256]; // Use a constant for size, replace 256 as needed
+  strncpy(input_buf, curr_input, sizeof(input_buf) - 1);
+  input_buf[sizeof(input_buf) - 1] = '\0';
+
+  char *last_space = strrchr(input_buf, ' ');
+  char *base_path = ".";
+  char *working_path;
+  char pre_buf[256] = {0}; // Again, replace 256 as needed
+
+  if (last_space) {
+    *last_space = '\0';
+    last_space++;
+    strncpy(pre_buf, input_buf, sizeof(pre_buf) - 1);
+  } else {
+    last_space = input_buf;
+  }
+
+  char *last_slash = strrchr(last_space, '/');
+  if (last_slash) {
+    *last_slash = '\0';
+    base_path = last_space;
+    working_path = last_slash + 1;
+  } else {
+    working_path = last_space;
+  }
+
+  char best_comp[256] = {0}; // Replace 256 as needed
+  bool found = find_best_completion(working_path, base_path, best_comp,
+                                    sizeof(best_comp));
+  if (found) {
+    snprintf(comp_buf, buf_len, "%s%s%s/%s", pre_buf,
+             last_space == input_buf ? "" : " ", base_path, best_comp);
+  }
+
+  return found;
 }
 
 bool completion_get(char const *curr_input, char *comp_buf, int buf_len) {

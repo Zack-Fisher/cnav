@@ -23,7 +23,7 @@
 
 #define CMP(cmp_ptr, lit) (strncmp(cmp_ptr, lit, strlen(lit)) == 0)
 
-ModeData const *curr_mode_data = NULL;
+static ModeData const *curr_mode_data = NULL;
 
 int _try_switch_mode(const char *ptr) {
   ModeData *md = w_cm_get(&mode_data_map, ptr);
@@ -168,6 +168,16 @@ int main(int argc, char *argv[]) {
     }
     // all scripts pass, say nothing and exit.
     return 0;
+  }
+
+  {
+    char *home = getenv("HOME");
+    char fpath_buf[128];
+    sprintf(fpath_buf, "%s%s", home ? home : "", "/.cnavrc");
+    int err = run_script(fpath_buf);
+    if (err != 0) {
+      fprintf(stderr, "~/.cnavrc failed with '%d'.\n", err);
+    }
   }
 
   // else, we're in an interactive shell.

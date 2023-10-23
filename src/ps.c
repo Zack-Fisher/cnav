@@ -30,9 +30,9 @@ static void _sync_ps() {
   memset(_ps.buf, 0, MAX_PS_LEN); // might as well.
   char *_ptr = _ps.buf;
   if (_ps.err_code == 0) {
-    _ptr += sprintf(_ptr, "[ " ANSI_GREEN "%d " ANSI_RESET, _ps.err_code);
+    _ptr += sprintf(_ptr, ANSI_GREEN "%3d " ANSI_RESET, _ps.err_code);
   } else {
-    _ptr += sprintf(_ptr, "[ " ANSI_RED "%d " ANSI_RESET, _ps.err_code);
+    _ptr += sprintf(_ptr, ANSI_RED "%3d " ANSI_RESET, _ps.err_code);
   }
 
   int num_modes = 0;
@@ -52,9 +52,9 @@ static void _sync_ps() {
     _ptr += sprintf(_ptr, " ) ");
   }
 
-  _ptr +=
-      sprintf(_ptr, ANSI_GREEN "%s" ANSI_YELLOW "@" ANSI_GREEN "%s" ANSI_RESET,
-              _ps.username, _ps.hostname);
+  _ptr += sprintf(
+      _ptr, "\n" ANSI_GREEN "%s" ANSI_YELLOW "@" ANSI_GREEN "%s" ANSI_RESET,
+      _ps.username, _ps.hostname);
 
   char cwd[512];
   if (getcwd(cwd, 512)) {
@@ -63,7 +63,7 @@ static void _sync_ps() {
     perror("getcwd");
   }
 
-  _ptr += sprintf(_ptr, " ]> ");
+  _ptr += sprintf(_ptr, " > ");
 }
 
 void add_ps_mode(char const *mode) {
