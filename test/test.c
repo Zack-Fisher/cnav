@@ -1,6 +1,7 @@
 #include "../src/builtin.h"
 #include "../src/command.h"
 #include "../src/complete.h"
+#include "../src/history.h"
 #include "../src/main.h"
 
 #include <assert.h>
@@ -94,6 +95,12 @@ int main() {
   // globbing
   test_expansion("*", NULL);
   test_expansion("ls *", NULL);
+
+  history_enter_command("other stuff");
+  history_enter_command("ls | grep blah blah blah");
+  history_enter_command("echo hi");
+  test_expansion("a !!", "a echo hi");
+  test_expand_and_tokenize("a !!", (const char *[]){"a", "echo", "hi"});
 
   // cancelling metacharacters
   test_expansion("\\*", "*");

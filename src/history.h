@@ -10,6 +10,8 @@ typedef struct History {
   int curr_position;
 } History;
 
+extern History history;
+
 // these either return the pointer to the string or NULL if we've hit either end
 // of the history.
 const char *history_back();

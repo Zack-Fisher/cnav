@@ -32,6 +32,7 @@ void history_enter_command(char const *cmd) {
     printf("Clearing history, it's full.\n");
     history_clear();
   }
+  // reset the history state with every command that we enter.
   history.curr_position = history.last_command_position;
 }
 

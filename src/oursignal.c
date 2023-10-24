@@ -25,10 +25,6 @@ static void segfault_handler(int sig) {
 static void passthrough_handler(int sig) {
   if (child_pid != -1) {
     kill(child_pid, sig);
-  } else {
-    signal(sig, SIG_DFL); // Reset to default handler
-    raise(sig);           // re-raise the signal for the default handler.
-    signal(sig, passthrough_handler);
   }
 }
 

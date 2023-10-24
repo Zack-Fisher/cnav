@@ -1,7 +1,9 @@
 #include "command.h"
 
+#include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,6 +13,7 @@
 #include <unistd.h>
 
 #include "builtin.h"
+#include "history.h"
 #include "main.h"
 #include "terminal.h"
 
@@ -122,6 +125,28 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
       } break;
 
       case '!': {
+        if (input[i + 1] == '!') {
+          i++;
+          // need room to go back.
+          if (history.last_command_position > 0) {
+            char const *last_cmd =
+                history.commands[history.last_command_position - 1];
+            _ptr += sprintf(_ptr, "%s", last_cmd);
+          }
+        } else {
+          // get the number after the !, and expand that history entry.
+          char digit_buf[10];
+          int digit_buf_len = 0;
+          while (isdigit(input[i + 1])) {
+            digit_buf[digit_buf_len++] = input[i + 1];
+            i++;
+          }
+          digit_buf[digit_buf_len++] = '\0';
+          int history_idx = atoi(digit_buf) + 1;
+          if (history_idx < MAX_HISTORY_LEN) {
+            _ptr += sprintf(_ptr, "%s", history.commands[history_idx]);
+          }
+        }
       } break;
 
       case '~': {
@@ -222,6 +247,9 @@ int parse_and_execute_command(char const *input, int input_len) {
 
   const int expanded_length =
       cmd_expand(input, input_len, expand_buf, EXPAND_BUF_LEN);
+
+  // enter history no matter the type or mode.
+  history_enter_command(expand_buf);
 
   {
     char *space = strchr(expand_buf, ' ');

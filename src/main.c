@@ -168,7 +168,13 @@ int main(int argc, char *argv[]) {
     // manually.
     char c;
 
-#define READ() read(STDIN_FILENO, &c, 1);
+#define READ()                                                                 \
+  {                                                                            \
+    if (read(STDIN_FILENO, &c, 1) == -1) {                                     \
+      perror("read");                                                          \
+      goto done_reading;                                                       \
+    }                                                                          \
+  }
 
     while (1) {
       READ();
@@ -258,11 +264,10 @@ int main(int argc, char *argv[]) {
 
   done_parsing_input : {}
 
-    // enter history no matter the type or mode.
-    history_enter_command(input);
-
     int err = handle_input_line(input);
   }
+
+done_reading : {}
 
   return 0;
 }
