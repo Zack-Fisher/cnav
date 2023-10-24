@@ -106,6 +106,12 @@ int mode_run(Mode mode, char *input_ptr) {
     fill_file("/tmp/cnav_in.c",
               "#include <stdio.h>\n"
               "#include <stdlib.h>\n"
+              "#include <stddef.h>\n"
+              "#include <fcntl.h>\n"
+              "#include <string.h>\n"
+              "#include <unistd.h>\n"
+              "#include <sys/stat.h>\n"
+              "#include <dirent.h>\n"
               "int main() {%s}",
               input_ptr, &_input_files[C_MODE]);
     // compile the string.

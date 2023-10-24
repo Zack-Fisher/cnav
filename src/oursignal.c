@@ -1,4 +1,5 @@
 #include "oursignal.h"
+#include "command.h"
 #include "main.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,19 @@ static void segfault_handler(int sig) {
   exit(1);
 }
 
+static void passthrough_handler(int sig) {
+  if (child_pid != -1) {
+    kill(child_pid, sig);
+  }
+}
+
 void install_signal_handlers() {
-  signal(SIGSEGV, segfault_handler); // install handlers
+  signal(SIGSEGV, segfault_handler);
+
+  signal(SIGINT, passthrough_handler);
+  signal(SIGTSTP, passthrough_handler);
+  signal(SIGQUIT, passthrough_handler);
+  signal(SIGTERM, passthrough_handler);
+  signal(SIGHUP, passthrough_handler);
+  signal(SIGCONT, passthrough_handler);
 }

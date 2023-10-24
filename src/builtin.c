@@ -120,10 +120,24 @@ int history_builtin(int argc, char *argv[]) {
   return 0;
 }
 
+int testargs_builtin(int argc, char *argv[]) {
+  for (int i = 0; i < argc; i++) {
+    printf("[%d]: %s\n", i, argv[i]);
+  }
+  return 0;
+}
+
+int type_builtin(int argc, char *argv[]) {
+  fprintf(stderr, "NOT IMPLEMENTED\n");
+  return 1;
+}
+
 MAKE_WCOLMAP(builtin_map, sizeof(Builtin), 509, {
   w_cm_insert(&builtin_map, "cd", &(Builtin){.fn = cd_builtin});
   w_cm_insert(&builtin_map, "exit", &(Builtin){.fn = exit_builtin});
   w_cm_insert(&builtin_map, "history", &(Builtin){.fn = history_builtin});
   w_cm_insert(&builtin_map, "export", &(Builtin){.fn = export_builtin});
   w_cm_insert(&builtin_map, "alias", &(Builtin){.fn = alias_builtin});
+  w_cm_insert(&builtin_map, "type", &(Builtin){.fn = type_builtin});
+  w_cm_insert(&builtin_map, "testargs", &(Builtin){.fn = testargs_builtin});
 });

@@ -57,8 +57,15 @@ bool path_completion_get(const char *curr_input, char *comp_buf, int buf_len) {
   bool found = find_best_completion(working_path, base_path, best_comp,
                                     sizeof(best_comp));
   if (found) {
-    snprintf(comp_buf, buf_len, "%s%s%s/%s", pre_buf,
-             last_space == input_buf ? "" : " ", base_path, best_comp);
+    bool is_quoted =
+        (strchr(best_comp, ' ') ||
+         strchr(base_path,
+                ' ')); // if the name has a space in it, we need to quote it.
+#define QUOTE ((is_quoted) ? "\"" : "")
+    snprintf(comp_buf, buf_len, "%s%s%s%s/%s%s", pre_buf,
+             last_space == input_buf ? "" : " ", QUOTE, base_path, best_comp,
+             QUOTE);
+#undef QUOTE
   }
 
   return found;

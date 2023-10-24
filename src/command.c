@@ -3,11 +3,11 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include "builtin.h"
@@ -18,6 +18,55 @@
 
 char last_arg_buf[MAX_VARIABLE_VALUE_LEN];
 
+char tokenize_line_result[64][MAX_INPUT_LEN] = {0};
+
+// Tokenize input into command and arguments
+int tokenize_line(char const *line) {
+  int argc = 0;
+  int i = 0;
+  int curr_arg_idx = 0;
+
+  bool is_in_quotes = false;
+
+  while (line[i]) {
+    switch (line[i]) {
+    case '\\': {
+      // skip the space ahead of the \.
+      // hello\ world is one token.
+      i++;
+      tokenize_line_result[argc][curr_arg_idx++] = line[i];
+    } break;
+
+    case '"': {
+      is_in_quotes = !is_in_quotes;
+    } break;
+
+    case ' ': {
+      if (!is_in_quotes) { // normal handler
+        while (line[i + 1] == ' ') {
+          i++;
+        }
+        // start appending to the next word, a raw space means word break.
+        tokenize_line_result[argc++][curr_arg_idx++] = '\0';
+        curr_arg_idx = 0;
+      } else {
+        tokenize_line_result[argc][curr_arg_idx++] =
+            line[i]; // put the space through verbatim, it's treated like a
+                     // normal character.
+      }
+    } break;
+
+    default: {
+      tokenize_line_result[argc][curr_arg_idx++] = line[i];
+    } break;
+    }
+
+    i++;
+  }
+  tokenize_line_result[argc++][curr_arg_idx++] = '\0';
+  return argc;
+}
+
 int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   char *_ptr = buf;
   char *home = getenv("HOME");
@@ -26,6 +75,8 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   }
 
   int i = 0, len;
+
+  bool is_in_single_quotes = false;
 
   while (i < input_len) {
 
@@ -39,60 +90,98 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   strncpy(word_buf, &input[i], word_len);                                      \
   word_buf[word_len] = '\0';
 
-    switch (input[i]) {
-    case '~': {
-      _ptr += sprintf(_ptr, "%s", home);
-      break;
-    }
+    if (is_in_single_quotes) {
+      switch (input[i]) {
+      case '\'': {
+        *_ptr = '\"';
+        _ptr++;
+        is_in_single_quotes = false;
+      } break;
 
-      // for now, just list out the whole dir. don't do any smart globbing.
-    case '*': {
-      char cwd_buf[128];
-      getcwd(cwd_buf, 128);
-      DIR *d = opendir(cwd_buf);
-      if (d) {
-        struct dirent *de;
-        while ((de = readdir(d))) {
-          if ((strcmp(de->d_name, ".") == 0) ||
-              (strcmp(de->d_name, "..") == 0)) {
-            continue;
-          }
-          _ptr += sprintf(_ptr, "%s ", de->d_name);
+      default: { // everything is passed through verbatim, nothing happens in
+                 // single quotes.
+        *_ptr = input[i];
+        _ptr++;
+      } break;
+      }
+    } else {
+      switch (input[i]) {
+      case '\'': {
+        *_ptr = '\"';
+        _ptr++;
+        is_in_single_quotes = true;
+      } break;
+
+      case '\\': {
+        // this is an ugly hack i think?
+        if (input[i + 1] != ' ') {
+          i++;
+          *_ptr = input[i]; // treat the metacharacter like a normal one.
+          _ptr++;
+        } else {
+          *_ptr = input[i]; // keep around the backslash for word splitting in
+                            // the tokenizer.
+          _ptr++;
         }
-        closedir(d);
-      } else {
-        perror("opendir");
-        fprintf(stderr, "Failed to glob '%s'.\n", cwd_buf);
-      }
-    } break;
+      } break;
 
-    case '$': {
-      // need to bump past $
-      i++;
-      GET_WORD();
-      Variable *v = w_cm_get(&variable_map, word_buf);
-      if (v && (strcmp(word_buf, v->name) == 0)) {
-        _ptr += sprintf(_ptr, "%s", v->value);
-        i += word_len; // bump past the word.
-      }
-    } break;
+      case '!': {
+      } break;
 
-    default: {
-      GET_WORD();
-      Alias *a = w_cm_get(&alias_map, word_buf);
-      // make sure it's a real match, this way hashmap collisions aren't nearly
-      // as much of a problem.
-      //
-      // printf("'%s', '%s'\n", word_buf, (a) ? a->from : "");
-      if (a && (strcmp(word_buf, a->from) == 0)) {
-        _ptr += sprintf(_ptr, "%s", a->to);
-        i += word_len; // bump past the word.
+      case '~': {
+        _ptr += sprintf(_ptr, "%s", home);
+        break;
       }
 
-      // don't even need sprintf here.
-      *_ptr = input[i];
-      _ptr++;
-    }
+        // for now, just list out the whole dir. don't do any smart globbing.
+      case '*': {
+        char cwd_buf[128];
+        getcwd(cwd_buf, 128);
+        DIR *d = opendir(cwd_buf);
+        if (d) {
+          struct dirent *de;
+          while ((de = readdir(d))) {
+            if ((strcmp(de->d_name, ".") == 0) ||
+                (strcmp(de->d_name, "..") == 0)) {
+              continue;
+            }
+            _ptr += sprintf(_ptr, "%s ", de->d_name);
+          }
+          closedir(d);
+        } else {
+          perror("opendir");
+          fprintf(stderr, "Failed to glob '%s'.\n", cwd_buf);
+        }
+      } break;
+
+      case '$': {
+        // need to bump past $
+        i++;
+        GET_WORD();
+        Variable *v = w_cm_get(&variable_map, word_buf);
+        if (v && (strcmp(word_buf, v->name) == 0)) {
+          _ptr += sprintf(_ptr, "%s", v->value);
+          i += word_len; // bump past the word.
+        }
+      } break;
+
+      default: {
+        GET_WORD();
+        Alias *a = w_cm_get(&alias_map, word_buf);
+        // make sure it's a real match, this way hashmap collisions aren't
+        // nearly as much of a problem.
+        //
+        // printf("'%s', '%s'\n", word_buf, (a) ? a->from : "");
+        if (a && (strcmp(word_buf, a->from) == 0)) {
+          _ptr += sprintf(_ptr, "%s", a->to);
+          i += word_len; // bump past the word.
+        }
+
+        // don't even need sprintf here.
+        *_ptr = input[i];
+        _ptr++;
+      }
+      }
     }
 
     i++;
@@ -145,19 +234,11 @@ int parse_and_execute_command(char const *input, int input_len) {
     }
   }
 
-  // Tokenize input into command and arguments
-  char *token;
-  int argc = 0;
-  char *argv[MAX_INPUT_LEN];
-
-  token = strtok(expand_buf, " ");
-  while (token != NULL) {
-    argv[argc] = token;
-    argc++;
-    token = strtok(NULL, " ");
+  int argc = tokenize_line(expand_buf);
+  char *argv[argc];
+  for (int i = 0; i < argc; i++) {
+    argv[i] = tokenize_line_result[i];
   }
-  argv[argc] = NULL; // don't forget to NULL term, we're using the syscall
-                     // directly for exec.
 
   // try to execute the builtin from argv[0], or fallback on just running it
   // through sh.
@@ -169,31 +250,34 @@ int parse_and_execute_command(char const *input, int input_len) {
   }
 }
 
+pid_t child_pid = -1;
+
 int execute_command(int argc, char *argv[]) {
   // else, execute the normal command.
-  pid_t pid, wpid;
+  pid_t wpid;
   int status;
 
   // don't force weird terminal settings on every child process.
   term_restore();
 
-  pid = fork();
-  if (pid == 0) {
+  child_pid = fork();
+  if (child_pid == 0) {
     // Child process
     if (execvp(argv[0], argv) == -1) {
       perror("Error executing command");
     }
     exit(EXIT_FAILURE);
-  } else if (pid < 0) {
+  } else if (child_pid < 0) {
     perror("Fork failed");
   } else {
     // Parent process
     do {
-      wpid = waitpid(pid, &status, WUNTRACED);
+      wpid = waitpid(child_pid, &status, WUNTRACED);
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
   }
 
   term_setup();
+  child_pid = -1; // inform the rest of the program that the child has exited.
 
   return status;
 }
