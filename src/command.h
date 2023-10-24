@@ -16,7 +16,7 @@
   }
 
 // buffer for the $_ variable.
-extern char last_arg_buf[MAX_VARIABLE_VALUE_LEN];
+extern char last_arg_buf[128];
 
 // -1 if a child process isn't active.
 extern pid_t child_pid;

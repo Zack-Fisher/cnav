@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@
 MAKE_WCOLMAP(alias_map, sizeof(Alias), 1021, {
   // mapping from -> to.
   INSERT("ls", "ls --color=auto");
-  INSERT("grep", "grep -rin");
+  INSERT("grep", "grep -n --color=auto");
   INSERT("objdump", "objdump -M intel");
   INSERT("clip", "xclip -sel clip <");
   INSERT("mkdir", "mkdir -p");
@@ -92,7 +93,7 @@ int export_builtin(int argc, char *argv[]) {
     if (eq) {
       eq[0] = '\0';
       printf("export: inserting variable $'%s' = '%s'\n", argv[1], eq + 1);
-      insert_variable(argv[1], eq + 1);
+      setenv(argv[1], eq + 1, true);
       return 0;
     } else {
       USAGE("no equals sign found in second arg.");
@@ -132,12 +133,18 @@ int type_builtin(int argc, char *argv[]) {
   return 1;
 }
 
-MAKE_WCOLMAP(builtin_map, sizeof(Builtin), 509, {
-  w_cm_insert(&builtin_map, "cd", &(Builtin){.fn = cd_builtin});
-  w_cm_insert(&builtin_map, "exit", &(Builtin){.fn = exit_builtin});
-  w_cm_insert(&builtin_map, "history", &(Builtin){.fn = history_builtin});
-  w_cm_insert(&builtin_map, "export", &(Builtin){.fn = export_builtin});
-  w_cm_insert(&builtin_map, "alias", &(Builtin){.fn = alias_builtin});
-  w_cm_insert(&builtin_map, "type", &(Builtin){.fn = type_builtin});
-  w_cm_insert(&builtin_map, "testargs", &(Builtin){.fn = testargs_builtin});
+#define INSERT(name_lit, fn_ptr)                                               \
+  w_cm_insert(&builtin_map, name_lit,                                          \
+              &(Builtin){.fn = cd_builtin, .name = name_lit "\0"})
+
+MAKE_WCOLMAP(builtin_map, sizeof(Builtin), 1031, {
+  INSERT("cd", cd_builtin);
+  INSERT("exit", exit_builtin);
+  INSERT("history", history_builtin);
+  INSERT("export", export_builtin);
+  INSERT("alias", alias_builtin);
+  INSERT("type", type_builtin);
+  INSERT("testargs", testargs_builtin);
 });
+
+#undef INSERT

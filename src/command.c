@@ -16,7 +16,7 @@
 
 #include "variables.h"
 
-char last_arg_buf[MAX_VARIABLE_VALUE_LEN];
+char last_arg_buf[128];
 
 char tokenize_line_result[64][MAX_INPUT_LEN] = {0};
 
@@ -158,10 +158,10 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
         // need to bump past $
         i++;
         GET_WORD();
-        Variable *v = w_cm_get(&variable_map, word_buf);
-        if (v && (strcmp(word_buf, v->name) == 0)) {
-          _ptr += sprintf(_ptr, "%s", v->value);
-          i += word_len; // bump past the word.
+        char *value = getenv(word_buf);
+        if (value) {
+          _ptr += sprintf(_ptr, "%s", value);
+          i += word_len - 1; // bump past the word.
         }
       } break;
 
@@ -210,7 +210,7 @@ int parse_and_execute_command(char const *input, int input_len) {
       last_space = input;
     }
 
-    strncpy(last_arg_buf, last_space, MAX_VARIABLE_VALUE_LEN);
+    strncpy(last_arg_buf, last_space, 128);
   }
 
   const int expanded_length =
@@ -228,7 +228,8 @@ int parse_and_execute_command(char const *input, int input_len) {
 
     // if there's no shell builtin for the first word, then execute the whole
     // string as a sh -c arg.
-    if (!w_cm_get(&builtin_map, word_buf)) {
+    Builtin const *b = w_cm_get(&builtin_map, word_buf);
+    if (!b || (strncmp(b->name, word_buf, MAX_BUILTIN_NAME_LEN) != 0)) {
       char *argv[] = {"/bin/sh", "-c", expand_buf, NULL};
       return execute_command(3, argv);
     }
@@ -243,7 +244,7 @@ int parse_and_execute_command(char const *input, int input_len) {
   // try to execute the builtin from argv[0], or fallback on just running it
   // through sh.
   Builtin const *b = w_cm_get(&builtin_map, argv[0]);
-  if (b && b->fn) {
+  if (b && (strncmp(b->name, argv[0], MAX_BUILTIN_NAME_LEN) == 0) && b->fn) {
     return b->fn(argc, argv);
   } else {
     return INTERNAL_ERROR;

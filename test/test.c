@@ -5,7 +5,9 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void test_expand_and_tokenize(char const *line, char const *expected[]) {
@@ -83,7 +85,11 @@ int main() {
   test_expansion("grep | blah", NULL);
 
   // variable expansion
+  setenv("?", "0", true);
   test_expansion("echo $?", "echo 0");
+  setenv("AHH", "variable", true);
+  test_expansion("$AHH oh my god $AHH blah",
+                 "variable oh my god variable blah");
 
   // globbing
   test_expansion("*", NULL);
