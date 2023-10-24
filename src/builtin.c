@@ -7,6 +7,7 @@
 #include "builtin.h"
 #include "command.h"
 #include "history.h"
+#include "variables.h"
 
 #include "whisper/colmap.h"
 
@@ -90,7 +91,8 @@ int export_builtin(int argc, char *argv[]) {
     char *eq = strchr(argv[1], '=');
     if (eq) {
       eq[0] = '\0';
-      w_cm_insert(&variable_map, argv[1], eq + 1);
+      printf("export: inserting variable $'%s' = '%s'\n", argv[1], eq + 1);
+      insert_variable(argv[1], eq + 1);
       return 0;
     } else {
       USAGE("no equals sign found in second arg.");

@@ -9,20 +9,8 @@
 #include "builtin.h"
 #include "main.h"
 #include "terminal.h"
-#include "whisper/colmap.h"
 
-#define INSERT(name_lit, value_lit)                                            \
-  {                                                                            \
-    w_cm_insert(&variable_map, name_lit,                                       \
-                &(Variable){.name = name_lit "\0", .value = value_lit "\0"});  \
-  }
-
-MAKE_WCOLMAP(variable_map, sizeof(Variable), 509, {
-  w_cm_insert(&variable_map, "_", "");
-  w_cm_insert(&variable_map, "X", "");
-});
-
-#undef INSERT
+#include "variables.h"
 
 int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   char *_ptr = buf;
@@ -56,8 +44,8 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
       i++;
       GET_WORD();
       Variable *v = w_cm_get(&variable_map, word_buf);
-      if (v) {
-        _ptr += sprintf(_ptr, "%s", v->name);
+      if (v && (strcmp(word_buf, v->name) == 0)) {
+        _ptr += sprintf(_ptr, "%s", v->value);
         i += word_len; // bump past the word.
       }
     } break;
@@ -65,7 +53,9 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
     default: {
       GET_WORD();
       Alias *a = w_cm_get(&alias_map, word_buf);
-      // make sure it's a real match.
+      // make sure it's a real match, this way hashmap collisions aren't nearly
+      // as much of a problem.
+      //
       // printf("'%s', '%s'\n", word_buf, (a) ? a->from : "");
       if (a && (strcmp(word_buf, a->from) == 0)) {
         _ptr += sprintf(_ptr, "%s", a->to);
