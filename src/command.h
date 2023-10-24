@@ -1,5 +1,6 @@
 #pragma once
 
+#include "variables.h"
 #include "whisper/colmap.h"
 
 #define EXECUTE_AND_COUNT(eac_argv)                                            \
@@ -10,6 +11,9 @@
       ;                                                                        \
     execute_and_count_result = execute_command(eac_argc, eac_argv);            \
   }
+
+// buffer for the $_ variable.
+extern char last_arg_buf[MAX_VARIABLE_VALUE_LEN];
 
 int cmd_expand(char const *input, int input_len, char *buf, int buf_len);
 int parse_and_execute_command(char const *input, int input_len);

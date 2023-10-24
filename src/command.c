@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,8 @@
 #include "terminal.h"
 
 #include "variables.h"
+
+char last_arg_buf[MAX_VARIABLE_VALUE_LEN];
 
 int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   char *_ptr = buf;
@@ -108,6 +111,17 @@ static char expand_buf[EXPAND_BUF_LEN];
 int parse_and_execute_command(char const *input, int input_len) {
   if (input_len <= 0) {
     return 0;
+  }
+
+  {
+    char const *last_space = strrchr(input, ' ');
+    if (last_space) {
+      last_space++;
+    } else {
+      last_space = input;
+    }
+
+    strncpy(last_arg_buf, last_space, MAX_VARIABLE_VALUE_LEN);
   }
 
   const int expanded_length =

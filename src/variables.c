@@ -1,4 +1,6 @@
 #include "variables.h"
+#include "command.h"
+#include <stdio.h>
 #include <string.h>
 
 #define INSERT(name_lit, value_lit)                                            \
@@ -12,6 +14,23 @@ int insert_variable(char const *name, char const *value) {
   strncpy(v.value, value, MAX_VARIABLE_VALUE_LEN);
   w_cm_insert(&variable_map, name, &v);
   return 0;
+}
+
+int change_variable(char const *name, char const *value) {
+  Variable *v = w_cm_get(&variable_map, name);
+  if (v) {
+    strncpy(v->value, value, MAX_VARIABLE_VALUE_LEN - 1);
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+void update_variables(int new_err_code) {
+  char value_buf[12];
+  snprintf(value_buf, 12, "%d", new_err_code);
+  change_variable("?", value_buf);
+  change_variable("_", last_arg_buf);
 }
 
 MAKE_WCOLMAP(variable_map, sizeof(Variable), 509, {

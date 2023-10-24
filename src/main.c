@@ -17,6 +17,7 @@
 #include "ps.h"
 #include "run.h"
 #include "terminal.h"
+#include "variables.h"
 #include "whisper/colmap.h"
 
 #define CTRL(ch) (ch & 0x1F)
@@ -349,6 +350,7 @@ int main(int argc, char *argv[]) {
 
     int err = handle_input_line(input);
     set_ps_error_code(err);
+    update_variables(err);
   }
 
   return 0;

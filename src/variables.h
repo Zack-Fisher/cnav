@@ -13,3 +13,6 @@ typedef struct Variable {
 } Variable;
 
 extern WColMap variable_map;
+
+int change_variable(char const *name, char const *value);
+void update_variables(int new_err_code);
