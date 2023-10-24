@@ -4,6 +4,8 @@ OBJS=$(patsubst %.c,%.o,$(SRCS))
 CC=gcc
 CFLAGS=-ggdb3 -rdynamic -O0
 
+GDB=gf2
+
 COMPILE=$(CC) $(CFLAGS) -c
 LINK=$(CC) $(CFLAGS)
 
@@ -13,6 +15,9 @@ all: cnav
 
 test: cnav_test
 	./cnav_test
+
+test_debug: cnav_test
+	$(GDB) -ex run ./cnav_test
 
 install: cnav
 	ln -sf "$(shell pwd)/cnav" $(INSTALL_PATH)
@@ -43,4 +48,4 @@ clean:
 
 dummy:
 
-.PHONY: clean chsh install cnav all dummy test
+.PHONY: clean chsh install cnav all dummy test test_debug

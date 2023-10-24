@@ -1,7 +1,19 @@
+#include "../src/builtin.h"
+#include "../src/command.h"
 #include "../src/complete.h"
 #include "../src/main.h"
 
+#include <math.h>
 #include <stdio.h>
+#include <string.h>
+
+void test_expansion(char const *input) {
+  int input_len = strlen(input);
+  int expansion_len = input_len * 4;
+  char expand_buf[expansion_len];
+  cmd_expand(input, input_len, expand_buf, expansion_len);
+  printf("Shell expansion: '%s' -> '%s'\n", input, expand_buf);
+}
 
 #define TEST_PATH_COMPLETION(test_lit)                                         \
   {                                                                            \
@@ -15,6 +27,8 @@
   }
 
 int main() {
+  printf("testing\n");
+
   TEST_PATH_COMPLETION("Make");
   TEST_PATH_COMPLETION("MAKE");
   TEST_PATH_COMPLETION("");
@@ -24,5 +38,20 @@ int main() {
   TEST_PATH_COMPLETION("cd Makef");
   TEST_PATH_COMPLETION("cd te");
   TEST_PATH_COMPLETION("cd test_");
+
+  test_expansion("~/lkasjdf");
+  test_expansion("ls grep man");
+  test_expansion("ls");
+  test_expansion("ls");
+  test_expansion("ls");
+  test_expansion("ls ls");
+  test_expansion("grep | blah");
+  test_expansion("grep | blah");
+  test_expansion("grep | blah");
+  test_expansion("grep | blah");
+  test_expansion("~");
+
+  printf("done testing\n");
+
   return 0;
 }
