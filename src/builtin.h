@@ -2,11 +2,12 @@
 
 #include "whisper/colmap.h"
 
-#define ALIAS_SIDE_LEN (64)
+#define ALIAS_FROM_LEN (64)
+#define ALIAS_TO_LEN (256)
 
 typedef struct Alias {
-  char from[ALIAS_SIDE_LEN];
-  char to[ALIAS_SIDE_LEN];
+  char from[ALIAS_FROM_LEN];
+  char to[ALIAS_TO_LEN];
 } Alias;
 
 extern WColMap alias_map;

@@ -66,7 +66,6 @@ int handle_input_line(char *input) {
     char *ptr = input + 1;
     return _try_switch_mode(ptr);
   } else { // parse a normal command based on the mode we're in.
-
     if (IS_MODE_INTERNAL(curr_mode_data->mode)) {
       // evaluate the expression in the normal bash shell in PATH.
       return parse_and_execute_command(input, strlen(input));

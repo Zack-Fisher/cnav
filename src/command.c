@@ -11,6 +11,19 @@
 #include "terminal.h"
 #include "whisper/colmap.h"
 
+#define INSERT(name_lit, value_lit)                                            \
+  {                                                                            \
+    w_cm_insert(&variable_map, name_lit,                                       \
+                &(Variable){.name = name_lit "\0", .value = value_lit "\0"});  \
+  }
+
+MAKE_WCOLMAP(variable_map, sizeof(Variable), 509, {
+  w_cm_insert(&variable_map, "_", "");
+  w_cm_insert(&variable_map, "X", "");
+});
+
+#undef INSERT
+
 int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   char *_ptr = buf;
   char *home = getenv("HOME");
@@ -21,26 +34,40 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   int i = 0, len;
 
   while (i < input_len) {
+
+#define GET_WORD()                                                             \
+  char const *space = strchr(&input[i], ' ');                                  \
+  if (!space) {                                                                \
+    space = input + input_len;                                                 \
+  }                                                                            \
+  int word_len = space - (input + i);                                          \
+  char word_buf[word_len + 1];                                                 \
+  strncpy(word_buf, &input[i], word_len);                                      \
+  word_buf[word_len] = '\0';
+
     switch (input[i]) {
     case '~': {
       _ptr += sprintf(_ptr, "%s", home);
       break;
     }
 
-    default: {
-      // we're not already on a space here.
-      char const *space = strchr(&input[i], ' ');
-      if (!space) {
-        space =
-            input + input_len; // pretend the "space" is on the null terminator.
+    case '$': {
+      // need to bump past $
+      i++;
+      GET_WORD();
+      Variable *v = w_cm_get(&variable_map, word_buf);
+      if (v) {
+        _ptr += sprintf(_ptr, "%s", v->name);
+        i += word_len; // bump past the word.
       }
+    } break;
 
-      int word_len = space - (input + i);
-      char word_buf[word_len + 1];
-      strncpy(word_buf, &input[i], word_len);
-      word_buf[word_len] = '\0';
+    default: {
+      GET_WORD();
       Alias *a = w_cm_get(&alias_map, word_buf);
-      if (a) {
+      // make sure it's a real match.
+      // printf("'%s', '%s'\n", word_buf, (a) ? a->from : "");
+      if (a && (strcmp(word_buf, a->from) == 0)) {
         _ptr += sprintf(_ptr, "%s", a->to);
         i += word_len; // bump past the word.
       }
