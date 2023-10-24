@@ -80,15 +80,11 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
 
   while (i < input_len) {
 
-#define GET_WORD()                                                             \
-  char const *space = strchr(&input[i], ' ');                                  \
-  if (!space) {                                                                \
-    space = input + input_len;                                                 \
-  }                                                                            \
-  int word_len = space - (input + i);                                          \
-  char word_buf[word_len + 1];                                                 \
-  strncpy(word_buf, &input[i], word_len);                                      \
-  word_buf[word_len] = '\0';
+#define GET_STUFF_UNTIL(future_pointer)                                        \
+  int stuff_len = future_pointer - (input + i);                                \
+  char stuff_buf[stuff_len + 1];                                               \
+  strncpy(stuff_buf, &input[i], stuff_len);                                    \
+  stuff_buf[stuff_len] = '\0';
 
     if (is_in_single_quotes) {
       switch (input[i]) {
@@ -157,24 +153,35 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
       case '$': {
         // need to bump past $
         i++;
-        GET_WORD();
-        char *value = getenv(word_buf);
+        char variable_buf[64];
+        int variable_len = 0;
+#define NOT(ch) (input[i] != ch)
+        while (NOT(' ') && NOT(':') && NOT('/')) {
+          variable_buf[variable_len++] = input[i++];
+        }
+        i--;
+        variable_buf[variable_len] = '\0';
+#undef NOT
+        char *value = getenv(variable_buf);
         if (value) {
           _ptr += sprintf(_ptr, "%s", value);
-          i += word_len - 1; // bump past the word.
         }
       } break;
 
       default: {
-        GET_WORD();
-        Alias *a = w_cm_get(&alias_map, word_buf);
+        char const *space = strchr(&input[i], ' ');
+        if (!space) {
+          space = input + input_len;
+        }
+        GET_STUFF_UNTIL(space);
+        Alias *a = w_cm_get(&alias_map, stuff_buf);
         // make sure it's a real match, this way hashmap collisions aren't
         // nearly as much of a problem.
         //
-        // printf("'%s', '%s'\n", word_buf, (a) ? a->from : "");
-        if (a && (strcmp(word_buf, a->from) == 0)) {
+        // printf("'%s', '%s'\n", stuff_buf, (a) ? a->from : "");
+        if (a && (strcmp(stuff_buf, a->from) == 0)) {
           _ptr += sprintf(_ptr, "%s", a->to);
-          i += word_len; // bump past the word.
+          i += stuff_len; // bump past the stuff.
         }
 
         // don't even need sprintf here.

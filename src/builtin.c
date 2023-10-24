@@ -92,7 +92,6 @@ int export_builtin(int argc, char *argv[]) {
     char *eq = strchr(argv[1], '=');
     if (eq) {
       eq[0] = '\0';
-      printf("export: inserting variable $'%s' = '%s'\n", argv[1], eq + 1);
       setenv(argv[1], eq + 1, true);
       return 0;
     } else {
@@ -135,7 +134,7 @@ int type_builtin(int argc, char *argv[]) {
 
 #define INSERT(name_lit, fn_ptr)                                               \
   w_cm_insert(&builtin_map, name_lit,                                          \
-              &(Builtin){.fn = cd_builtin, .name = name_lit "\0"})
+              &(Builtin){.fn = fn_ptr, .name = name_lit "\0"})
 
 MAKE_WCOLMAP(builtin_map, sizeof(Builtin), 1031, {
   INSERT("cd", cd_builtin);
