@@ -29,7 +29,8 @@ void history_enter_command(char const *cmd) {
         '\0';                        // Null-terminate
     ++history.last_command_position; // Increment after
   } else {
-    printf("Clear your history, it's full. (history -c)\n");
+    printf("Clearing history, it's full.\n");
+    history_clear();
   }
   history.curr_position = history.last_command_position;
 }

@@ -156,7 +156,7 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
         char variable_buf[64];
         int variable_len = 0;
 #define NOT(ch) (input[i] != ch)
-        while (NOT(' ') && NOT(':') && NOT('/')) {
+        while (NOT(' ') && NOT(':') && NOT('/') && NOT('\0')) {
           variable_buf[variable_len++] = input[i++];
         }
         i--;

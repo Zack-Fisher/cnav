@@ -127,8 +127,77 @@ int testargs_builtin(int argc, char *argv[]) {
   return 0;
 }
 
+#include <dirent.h>
+
+bool is_in_dir(char const *filename, char const *dirpath) {
+  DIR *d = opendir(dirpath);
+  if (d) {
+    struct dirent *de;
+    while ((de = readdir(d))) {
+      if (strcmp(de->d_name, filename) == 0) {
+        closedir(d);
+        return true;
+      }
+    }
+    closedir(d);
+    return false;
+  } else {
+    perror("opendir");
+    fprintf(stderr, "Could not open '%s' in the $PATH search.\n", dirpath);
+    return false;
+  }
+  return false;
+}
+
+int type_p_builtin(char const *exe_name) {
+  // avoid mutating the return value from getenv() directly, even though we can.
+  // we'll invalidate and overwrite the ACTUAL environment.
+  char *env_path = getenv("PATH");
+  char path[strlen(env_path) + 1];
+  strcpy(path, env_path);
+  char *path_base = path;
+  char *next_colon;
+
+#define TRY_PATH(path)                                                         \
+  {                                                                            \
+    if (is_in_dir(exe_name, path_base)) {                                      \
+      printf("%s is %s/%s.\n", exe_name, path_base, exe_name);                 \
+      return 0;                                                                \
+    }                                                                          \
+  }
+
+  while ((next_colon = strchr(path_base, ':'))) {
+    next_colon[0] = '\0';
+    TRY_PATH(path_base);
+    path_base = next_colon + 1;
+  }
+  TRY_PATH(path_base); // get the trailing path.
+
+#undef TRY_PATH
+
+  fprintf(stderr, "'%s' not found in PATH.\n", exe_name);
+  return 1;
+}
+
 int type_builtin(int argc, char *argv[]) {
-  fprintf(stderr, "NOT IMPLEMENTED\n");
+  int i = 0;
+  while (++i < argc) {
+    if (argv[i][0] == '-') {
+      switch (argv[i][1]) {
+      case 'p': {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "USAGE: type -p <name_of_executable>, you didn't "
+                          "provide a name.\n");
+          return 1;
+        } else {
+          return type_p_builtin(argv[i + 1]);
+        }
+      } break;
+      }
+    }
+  }
+
+  fprintf(stderr, "Invalid arguments passed to type.\n");
   return 1;
 }
 
