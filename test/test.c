@@ -9,7 +9,7 @@
 
 void test_expansion(char const *input) {
   int input_len = strlen(input);
-  int expansion_len = input_len * 4;
+  int expansion_len = 10 * 1024;
   char expand_buf[expansion_len];
   cmd_expand(input, input_len, expand_buf, expansion_len);
   printf("Shell expansion: '%s' -> '%s'\n", input, expand_buf);
@@ -39,7 +39,11 @@ int main() {
   TEST_PATH_COMPLETION("cd te");
   TEST_PATH_COMPLETION("cd test_");
 
+  // character expansion
+  test_expansion("~");
   test_expansion("~/lkasjdf");
+
+  // aliasing expansion
   test_expansion("ls grep man");
   test_expansion("ls");
   test_expansion("ls");
@@ -49,7 +53,13 @@ int main() {
   test_expansion("grep | blah");
   test_expansion("grep | blah");
   test_expansion("grep | blah");
-  test_expansion("~");
+
+  // variable expansion
+  test_expansion("echo $?");
+
+  // globbing
+  test_expansion("*");
+  test_expansion("ls *");
 
   printf("done testing\n");
 

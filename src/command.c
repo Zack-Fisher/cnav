@@ -1,8 +1,11 @@
 #include "command.h"
 
+#include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -38,6 +41,27 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
       _ptr += sprintf(_ptr, "%s", home);
       break;
     }
+
+      // for now, just list out the whole dir. don't do any smart globbing.
+    case '*': {
+      char cwd_buf[128];
+      getcwd(cwd_buf, 128);
+      DIR *d = opendir(cwd_buf);
+      if (d) {
+        struct dirent *de;
+        while ((de = readdir(d))) {
+          if ((strcmp(de->d_name, ".") == 0) ||
+              (strcmp(de->d_name, "..") == 0)) {
+            continue;
+          }
+          _ptr += sprintf(_ptr, "%s ", de->d_name);
+        }
+        closedir(d);
+      } else {
+        perror("opendir");
+        fprintf(stderr, "Failed to glob '%s'.\n", cwd_buf);
+      }
+    } break;
 
     case '$': {
       // need to bump past $
@@ -76,14 +100,18 @@ int cmd_expand(const char *input, int input_len, char *buf, int buf_len) {
   return _ptr - buf;
 }
 
+// i hate dynalloc.
+// just make it REALLY big and statically allocated and nobody will notice.
+#define EXPAND_BUF_LEN (16 * 1024)
+static char expand_buf[EXPAND_BUF_LEN];
+
 int parse_and_execute_command(char const *input, int input_len) {
   if (input_len <= 0) {
     return 0;
   }
 
-  char expand_buf[input_len * 4];
   const int expanded_length =
-      cmd_expand(input, input_len, expand_buf, input_len * 4);
+      cmd_expand(input, input_len, expand_buf, EXPAND_BUF_LEN);
 
   {
     char *space = strchr(expand_buf, ' ');
