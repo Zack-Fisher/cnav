@@ -34,3 +34,7 @@ change the mode that cnav starts in with
 ```sh
 cnav -f <mode_string>
 ```
+
+### startup
+
+Add a script to $HOME/.cnavrc and it will be parsed/run at runtime.

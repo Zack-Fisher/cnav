@@ -109,7 +109,8 @@ int mode_run(Mode mode, char *input_ptr) {
               "int main() {%s}",
               input_ptr, &_input_files[C_MODE]);
     // compile the string.
-    TRY_EXEC("gcc", "/tmp/cnav_in.c", "-o", "/tmp/cnav_bin");
+    TRY_EXEC("gcc", "-Wno-implicit-function-declaration", "/tmp/cnav_in.c",
+             "-o", "/tmp/cnav_bin");
     RUN_BIN("/tmp/cnav_bin");
   } break;
 

@@ -45,7 +45,7 @@ int cd_builtin(int argc, char *argv[]) {
       perror("chdir");
       return errno;
     }
-    char *ls_argv[] = {"ls", NULL};
+    char *ls_argv[] = {"ls", "--color=auto", NULL};
     EXECUTE_AND_COUNT(ls_argv);
     return 0;
   }

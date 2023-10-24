@@ -16,7 +16,9 @@ bool find_best_completion(const char *working_path, const char *base_path,
   bool found = false;
   while ((de = readdir(dr)) != NULL) {
     if (strncasecmp(working_path, de->d_name, strlen(working_path)) == 0) {
-      snprintf(comp_buf, buf_len, "%s", de->d_name);
+      // if it's a directory, put a slash.
+      snprintf(comp_buf, buf_len, "%s%s", de->d_name,
+               (de->d_type == DT_DIR) ? "/" : "");
       found = true;
       break; // Stop after finding the first match, could be improved
     }

@@ -25,8 +25,16 @@
 
 static ModeData const *curr_mode_data = NULL;
 
-int _try_switch_mode(const char *ptr) {
-  ModeData *md = w_cm_get(&mode_data_map, ptr);
+int _try_switch_mode(const char *key) {
+  char key_copy[strlen(key) + 1];
+  strcpy(key_copy, key);
+  char *whitespace = strchr(key_copy, ' ');
+  if (whitespace) {
+    // strip whitespace from the key copy with a null terminator.
+    whitespace[0] = '\0';
+  }
+
+  ModeData *md = w_cm_get(&mode_data_map, key_copy);
   if (md && IS_MODE_VALID(md->mode)) {
     if (curr_mode_data) {
       // cleanup the old mode, if it exists. the main execution modes should be
@@ -39,7 +47,7 @@ int _try_switch_mode(const char *ptr) {
     add_ps_mode(curr_mode_data->name);
     return 0;
   } else {
-    fprintf(stderr, "Failed to switch mode to '%s'.\n", ptr);
+    fprintf(stderr, "Failed to switch mode to '%s'.\n", key_copy);
     print_valid_modes();
     return INTERNAL_ERROR;
   }
@@ -85,8 +93,9 @@ int run_script(const char *filepath) {
   }
 
   int len = file_stat.st_size;
-  char script_buf[len];
+  char script_buf[len + 1];
   read(fd, script_buf, len);
+  script_buf[len] = '\0';
 
   char *base_line = script_buf;
   char *next_newline = strchr(base_line, '\n');
